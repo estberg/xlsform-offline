@@ -11,6 +11,8 @@ import subprocess
 import wx
 import worker
 
+import update_checker
+
 # TODO pull out all strings
 # TODO why is the first button selected
 
@@ -24,6 +26,8 @@ MAIN_WINDOW_WIDTH = 475
 MAIN_WINDOW_HEIGHT = 620
 ABOUT_WINDOW_WIDTH = 360
 ABOUT_WINDOW_HEIGHT = 365
+UPDATE_WINDOW_WIDTH = 360
+UPDATE_WINDOW_HEIGHT = 365
 MAX_PATH_LENGTH = 45
 HEADER_SPACER = 6
 CHOOSE_BORDER = 5
@@ -35,6 +39,8 @@ if sys.platform == 'darwin':
     MAIN_WINDOW_HEIGHT = 750
     ABOUT_WINDOW_WIDTH = 360
     ABOUT_WINDOW_HEIGHT = 315
+    UPDATE_WINDOW_WIDTH = 360
+    UPDATE_WINDOW_HEIGHT = 315
     MAX_PATH_LENGTH = 40
     HEADER_SPACER = 0
     CHOOSE_BORDER = 1
@@ -45,6 +51,27 @@ WORKER_FINISH = 'WORKER_FINISH'
 WORKER_PROGRESS = 'WORKER_PROGRESS'
 WORKER_PROGRESS_SLEEP = .05
 
+class UpdateAvailableFrame(wx.Frame):
+    def __init__(self, parent, update_info):
+        wx.Frame.__init__(self, parent, wx.ID_ANY, title='Update ' + update_info['latest_version'] + ' available',
+                          size=(UPDATE_WINDOW_WIDTH, UPDATE_WINDOW_HEIGHT),
+                          style=wx.SYSTEM_MENU | wx.CAPTION | wx.CLOSE_BOX)
+        html = HtmlWindow(self)
+        html.SetStandardFonts()
+        update_html_path = ''
+        if getattr(sys, 'frozen', False):
+            update_html_path = os.path.join(sys._MEIPASS, 'res', 'update.html')
+        else:
+            update_html_path = os.path.join('src', 'res', 'update.html')
+
+        update_html_text = ''
+        with open(update_html_path, 'r') as file:
+            update_html_text = file.read()
+
+        filled_update_html_text = update_html_text.replace('@desc', update_info['update_desc']).replace(
+            '@download_url', update_info['download_url']).replace('@download_name', update_info['download_name'])
+
+        html.SetPage(filled_update_html_text)
 
 class AboutFrame(wx.Frame):
     def __init__(self, parent):
@@ -89,6 +116,7 @@ class MainFrame(wx.Frame):
 
         self.quit_menu_item = wx.MenuItem(self.file_menu, APP_QUIT, '&Quit\tCtrl+Q')
         self.about_menu_item = wx.MenuItem(self.help_menu, APP_ABOUT, '&About ' + TITLE)
+        self.update_window = None
 
         self.file_menu.Append(self.quit_menu_item)
         self.help_menu.Append(self.about_menu_item)
@@ -223,6 +251,9 @@ class MainFrame(wx.Frame):
         self.Centre()
         self.Show()
 
+        update_checker.evt_update_check_done(self, self.check_update_and_show)
+        update_checker.UpdateChecker(self, VERSION).start()
+
     @staticmethod
     def shorten_string(string, max_length):
         if len(string) >= max_length:
@@ -291,6 +322,8 @@ class MainFrame(wx.Frame):
         self.Destroy()
         if self.about_window:
             self.about_window.Close()
+        if self.update_window:
+            self.update_window.Close()
 
     def on_about(self, e):
         if self.about_window:
@@ -314,6 +347,15 @@ class MainFrame(wx.Frame):
     def on_progress(self, event):
         if self.result_thread is not None and self.result_thread.isAlive():
             self.status_gauge.Pulse()
+
+    def check_update_and_show(self, event):
+        if self.update_window:
+            self.update_window.Close()
+
+        if event.data['update_available']:
+            self.update_window = UpdateAvailableFrame(None, event.data)
+            self.update_window.Centre()
+            self.update_window.Show()
 
     @staticmethod
     def is_java_installed():
