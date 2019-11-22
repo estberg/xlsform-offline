@@ -5,8 +5,10 @@ from packaging import version
 import threading
 import json
 import urllib2
+import urllib
 
 GITHUB_RELEASES_API = "https://api.github.com/repos/opendatakit/xlsform-offline/releases/latest"
+GITHUB_MARKDOWN_API = "https://api.github.com/markdown/raw"
 
 OS_MAP = {
     'win32': 'windows',
@@ -52,17 +54,24 @@ class UpdateChecker(threading.Thread):
                             download_name = asset['name']
                             break
 
+                    # second request is for markdown conversion 
+                    data = json_response["body"]
+                    request = urllib2.Request(url=GITHUB_MARKDOWN_API, headers={'Content-Type': 'text/plain'}, data=data)
+                    res = urllib2.urlopen(request)
+                    html_body = res.read()
+
                     wx.PostEvent(self._parent, UpdateCheckDoneEvent({
                         'update_available': True,
                         'latest_version': latest_version,
                         'download_url': download_url,
                         'download_name': download_name,
-                        'update_desc': json_response["body"]
+                        'update_desc': html_body
                     }))
                 else:
                     wx.PostEvent(self._parent, UpdateCheckDoneEvent({
                         'update_available': False
                     }))
         except Exception as ex:
+            print("EXCEPTION")
             print ex
             pass
