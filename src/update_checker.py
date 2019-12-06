@@ -5,7 +5,6 @@ from packaging import version
 import threading
 import json
 import urllib2
-import urllib
 
 GITHUB_RELEASES_API = "https://api.github.com/repos/opendatakit/xlsform-offline/releases/latest"
 GITHUB_MARKDOWN_API = "https://api.github.com/markdown/raw"
@@ -73,5 +72,5 @@ class UpdateChecker(threading.Thread):
                     }))
         except Exception as ex:
             print("EXCEPTION")
-            print ex
+            print(ex)
             pass
