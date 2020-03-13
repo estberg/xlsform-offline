@@ -10,8 +10,7 @@ rm -rf dist/mac;
 find . -name '*.pyc' -type f -delete;
 
 echo "Creating new build";
-# pyinstaller pkg/xlsform-offline-mac.spec --onefile --windowed --noconfirm --clean --log-level=DEBUG;
-pyinstaller pkg/main.spec --onefile --onedir --windowed --noconfirm --clean;
+pyinstaller pkg/xlsform-offline-mac.spec --distpath $(pwd)/dist/mac  --onefile --windowed --noconfirm --clean;
 
 if [[ -e "$BINARY" ]]; then
 	echo 'Adding version info';
